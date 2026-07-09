@@ -1,0 +1,110 @@
+import axios from 'axios'
+
+const request = axios.create({
+  baseURL: '/api',
+  timeout: 5000
+})
+
+request.interceptors.response.use(
+  (response) => {
+    return response.data
+  },
+  (error) => {
+    console.error('Request error:', error)
+    return Promise.reject(error)
+  }
+)
+
+export interface Equipment {
+  id?: number
+  equipmentCode: string
+  trainingPurpose: string
+  sizeSpec: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface Team {
+  id?: number
+  teamName: string
+  memberCount: number
+  description: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface Assignment {
+  id?: number
+  equipmentId: number
+  teamId: number
+  bindTime?: string
+  operator: string
+  remark: string
+}
+
+export interface AssignmentHistory {
+  id?: number
+  equipmentId: number
+  equipmentCode?: string
+  oldTeamId?: number
+  oldTeamName?: string
+  newTeamId: number
+  newTeamName?: string
+  changeTime?: string
+  operator: string
+  reason: string
+}
+
+export interface TeamStatistics {
+  teamId: number
+  teamName: string
+  equipmentCount: number
+}
+
+export interface OverviewStatistics {
+  totalEquipment: number
+  totalTeam: number
+  averageEquipmentPerTeam: number
+}
+
+export interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export const equipmentApi = {
+  getList: (params: { page: number; size: number; keyword?: string }) =>
+    request.get<PageResponse<Equipment>>('/equipment', { params }),
+  getById: (id: number) => request.get<Equipment>(`/equipment/${id}`),
+  create: (data: Equipment) => request.post('/equipment', data),
+  update: (id: number, data: Equipment) => request.put(`/equipment/${id}`, data),
+  delete: (id: number) => request.delete(`/equipment/${id}`)
+}
+
+export const teamApi = {
+  getList: (params: { page: number; size: number; keyword?: string }) =>
+    request.get<PageResponse<Team>>('/team', { params }),
+  getById: (id: number) => request.get<Team>(`/team/${id}`),
+  create: (data: Team) => request.post('/team', data),
+  update: (id: number, data: Team) => request.put(`/team/${id}`, data),
+  delete: (id: number) => request.delete(`/team/${id}`),
+  getAll: () => request.get<Team[]>('/team/all')
+}
+
+export const assignmentApi = {
+  bind: (data: Assignment) => request.post('/assignment/bind', data),
+  adjust: (data: { equipmentId: number; newTeamId: number; operator: string; reason: string }) =>
+    request.put('/assignment/adjust', data),
+  getHistory: (params: { page: number; size: number }) =>
+    request.get<PageResponse<AssignmentHistory>>('/assignment/history', { params }),
+  getByTeam: (teamId: number) => request.get<Equipment[]>(`/assignment/team/${teamId}`),
+  getUnassigned: () => request.get<Equipment[]>('/assignment/unassigned')
+}
+
+export const statisticsApi = {
+  getOverview: () => request.get<{ totalEquipment: number; totalTeam: number; averageEquipmentPerTeam: number }>('/statistics/overview'),
+  getTeamStatistics: () => request.get<TeamStatistics[]>('/statistics/team')
+}
