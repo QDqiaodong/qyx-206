@@ -151,6 +151,22 @@ public class OccupancyService {
                 teamId, trainingDate, TrainingOccupancy.STATUS_ACTIVE);
     }
 
+    /**
+     * 只读判定：该件器材是否存在“尚未结束”的有效课目占用。
+     * 供器材外借离场做前置拦截 —— 占用归占用、出门归出门，
+     * 离场侧只读这本账，不作废、不改时段、不回写任何占用数据。
+     * “尚未结束”口径与改班作废一致：训练日在今天之后，或今天但结束时刻晚于当前时刻。
+     */
+    public boolean hasActiveNotEndedOccupancy(Long equipmentId) {
+        LocalDate today = LocalDate.now();
+        LocalTime nowTime = LocalTime.now();
+        List<TrainingOccupancy> activeFromToday =
+                occupancyRepository.findActiveByEquipmentFrom(equipmentId, today);
+        return activeFromToday.stream().anyMatch(o ->
+                o.getTrainingDate().isAfter(today)
+                        || (o.getTrainingDate().isEqual(today) && o.getEndTime().isAfter(nowTime)));
+    }
+
     public List<Map<String, Object>> countActiveByTeam(LocalDate trainingDate) {
         return occupancyRepository.countActiveByTeamForDate(trainingDate).stream()
                 .map(row -> {

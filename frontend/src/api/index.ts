@@ -87,6 +87,36 @@ export interface OverviewStatistics {
   averageEquipmentPerTeam: number
 }
 
+export interface EquipmentLoan {
+  id?: number
+  equipmentId: number
+  equipmentCode?: string
+  trainingPurpose?: string
+  sizeSpec?: string
+  teamId: number
+  teamName?: string
+  checkoutTime?: string
+  expectedReturnTime: string
+  companions: string
+  reason: string
+  operator?: string
+  /** 落库状态：OUT / OVERDUE / RETURNED */
+  status?: 'OUT' | 'OVERDUE' | 'RETURNED'
+  /** 读时实际状态：扫描未跑到时，OUT 已过点也会呈现为 OVERDUE */
+  effectiveStatus?: 'OUT' | 'OVERDUE' | 'RETURNED'
+  overdue?: boolean
+  overdueTime?: string
+  returnTime?: string
+  returnOperator?: string
+  returnRemark?: string
+}
+
+export interface LoanSummary {
+  openCount: number
+  overdueCount: number
+  returnedCount: number
+}
+
 export interface PageResponse<T> {
   content: T[]
   totalElements: number
@@ -161,4 +191,28 @@ export const occupancyApi = {
     request.get<{ teamId: number; activeCount: number }[]>('/occupancy/active-counts', {
       params: { trainingDate }
     })
+}
+
+export interface LoanPageParams {
+  tab?: 'OPEN' | 'OVERDUE' | 'RETURNED' | 'ALL'
+  teamId?: number
+  equipmentId?: number
+  page?: number
+  size?: number
+}
+
+export const loanApi = {
+  checkout: (data: {
+    equipmentId: number
+    teamId: number
+    expectedReturnTime: string
+    companions: string
+    reason: string
+    operator?: string
+  }) => request.post<EquipmentLoan>('/loan/checkout', data),
+  returnLoan: (id: number, data?: { operator?: string; remark?: string }) =>
+    request.put<EquipmentLoan>(`/loan/${id}/return`, data ?? {}),
+  list: (params: LoanPageParams) => request.get<PageResponse<EquipmentLoan>>('/loan', { params }),
+  summary: () => request.get<LoanSummary>('/loan/summary'),
+  sweepOverdue: () => request.post<{ markedOverdue: number }>('/loan/sweep-overdue')
 }

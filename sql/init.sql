@@ -72,7 +72,34 @@ CREATE TABLE IF NOT EXISTS training_occupancy (
     CONSTRAINT fk_occupancy_team FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课目训练器材占用表';
 
-INSERT INTO team (team_name, member_count, description) VALUES 
+-- 器材外借离场：班长把本班组名下已归属器材拉出营区演练时的离场登记
+-- status: OUT 在外未还 / OVERDUE 超期未还（定时扫描翻状态并留痕）/ RETURNED 已归还
+-- “同一件器材在外未还不能再开第二条”在应用层通过器材行锁串行化保证，与课目占用同一把锁，不作唯一索引
+-- 离场与课目占用两本账互不回写：出门只读取占用做前置拦截，绝不改占用、不作废时段
+CREATE TABLE IF NOT EXISTS equipment_loan (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    equipment_id BIGINT NOT NULL COMMENT '器材ID',
+    team_id BIGINT NOT NULL COMMENT '出门时所属班组ID（快照）',
+    checkout_time DATETIME NOT NULL COMMENT '出门时间',
+    expected_return_time DATETIME NOT NULL COMMENT '预计归还时刻（必填）',
+    companions VARCHAR(500) NOT NULL COMMENT '同行人（必填）',
+    reason VARCHAR(500) NOT NULL COMMENT '离场事由（必填）',
+    operator VARCHAR(50) COMMENT '登记班长',
+    status VARCHAR(20) NOT NULL DEFAULT 'OUT' COMMENT '状态：OUT/OVERDUE/RETURNED',
+    overdue_time DATETIME NULL COMMENT '翻成超期的时间',
+    return_time DATETIME NULL COMMENT '实际归还时间',
+    return_operator VARCHAR(50) NULL COMMENT '归还经手人',
+    return_remark VARCHAR(200) NULL COMMENT '归还备注',
+    version BIGINT DEFAULT 0 COMMENT '乐观锁版本号',
+    INDEX idx_loan_equipment (equipment_id),
+    INDEX idx_loan_team (team_id),
+    INDEX idx_loan_status (status),
+    INDEX idx_loan_expected_return (expected_return_time),
+    CONSTRAINT fk_loan_equipment FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE CASCADE,
+    CONSTRAINT fk_loan_team FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='器材外借离场登记表';
+
+INSERT INTO team (team_name, member_count, description) VALUES
 ('灭火一班', 12, '负责灭火训练'),
 ('灭火二班', 10, '负责灭火训练'),
 ('救援一班', 8, '负责救援训练'),
