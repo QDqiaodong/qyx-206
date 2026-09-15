@@ -6,9 +6,10 @@ import com.example.app.entity.Assignment;
 import com.example.app.entity.AssignmentHistory;
 import com.example.app.entity.Equipment;
 import com.example.app.entity.Team;
+import com.example.app.exception.BusinessException;
 import com.example.app.repository.AssignmentHistoryRepository;
 import com.example.app.repository.AssignmentRepository;
-import lombok.RequiredArgsConstructor;
+import com.example.app.repository.EquipmentRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,21 +26,30 @@ public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
     private final AssignmentHistoryRepository historyRepository;
+    private final EquipmentRepository equipmentRepository;
     private final EquipmentService equipmentService;
     private final TeamService teamService;
+    private final OccupancyService occupancyService;
 
-    public AssignmentService(AssignmentRepository assignmentRepository, AssignmentHistoryRepository historyRepository, 
-                             EquipmentService equipmentService, TeamService teamService) {
+    public AssignmentService(AssignmentRepository assignmentRepository, AssignmentHistoryRepository historyRepository,
+                             EquipmentRepository equipmentRepository,
+                             EquipmentService equipmentService, TeamService teamService,
+                             OccupancyService occupancyService) {
         this.assignmentRepository = assignmentRepository;
         this.historyRepository = historyRepository;
+        this.equipmentRepository = equipmentRepository;
         this.equipmentService = equipmentService;
         this.teamService = teamService;
+        this.occupancyService = occupancyService;
     }
 
     @Transactional
     public Assignment bind(AssignmentDTO dto) {
+        // 锁器材行，与课目占用挂载互斥
+        equipmentRepository.findByIdForUpdate(dto.getEquipmentId())
+                .orElseThrow(() -> new BusinessException("器材不存在"));
         if (assignmentRepository.existsByEquipmentId(dto.getEquipmentId())) {
-            throw new RuntimeException("器材已绑定班组");
+            throw new BusinessException("器材已绑定班组");
         }
         Assignment assignment = new Assignment();
         assignment.setEquipmentId(dto.getEquipmentId());
@@ -62,19 +72,23 @@ public class AssignmentService {
 
     @Transactional
     public Assignment adjust(AssignmentAdjustDTO dto) {
+        // 锁器材行：与课目占用挂载互斥，保证“改班当场作废”与新挂载不会交错
+        equipmentRepository.findByIdForUpdate(dto.getEquipmentId())
+                .orElseThrow(() -> new BusinessException("器材不存在"));
+
         Assignment existing = assignmentRepository.findByEquipmentId(dto.getEquipmentId())
-                .orElseThrow(() -> new RuntimeException("器材未绑定班组"));
-        
+                .orElseThrow(() -> new BusinessException("器材未绑定班组"));
+
         if (existing.getTeamId().equals(dto.getNewTeamId())) {
-            throw new RuntimeException("新班组与原班组相同");
+            throw new BusinessException("新班组与原班组相同");
         }
-        
+
         Long oldTeamId = existing.getTeamId();
         existing.setTeamId(dto.getNewTeamId());
         existing.setOperator(dto.getOperator());
-        
+
         Assignment saved = assignmentRepository.save(existing);
-        
+
         AssignmentHistory history = new AssignmentHistory();
         history.setEquipmentId(dto.getEquipmentId());
         history.setOldTeamId(oldTeamId);
@@ -82,7 +96,10 @@ public class AssignmentService {
         history.setOperator(dto.getOperator());
         history.setReason(dto.getReason());
         historyRepository.save(history);
-        
+
+        // 归属调整照常通过，不拦截；但该件尚未结束的课目占用必须当场作废并留痕
+        occupancyService.cancelOnTeamTransfer(dto.getEquipmentId(), dto.getOperator(), dto.getReason());
+
         return saved;
     }
 

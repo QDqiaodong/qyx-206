@@ -61,6 +61,26 @@ export interface TeamStatistics {
   equipmentCount: number
 }
 
+export interface TrainingOccupancy {
+  id?: number
+  equipmentId: number
+  equipmentCode?: string
+  trainingPurpose?: string
+  sizeSpec?: string
+  teamId: number
+  teamName?: string
+  trainingDate: string
+  startTime: string
+  endTime: string
+  courseName: string
+  operator?: string
+  status?: 'ACTIVE' | 'CANCELLED'
+  createTime?: string
+  cancelTime?: string
+  cancelOperator?: string
+  cancelReason?: string
+}
+
 export interface OverviewStatistics {
   totalEquipment: number
   totalTeam: number
@@ -107,4 +127,38 @@ export const assignmentApi = {
 export const statisticsApi = {
   getOverview: () => request.get<{ totalEquipment: number; totalTeam: number; averageEquipmentPerTeam: number }>('/statistics/overview'),
   getTeamStatistics: () => request.get<TeamStatistics[]>('/statistics/team')
+}
+
+export interface OccupancyPageParams {
+  trainingDate: string
+  teamId?: number
+  equipmentId?: number
+  includeCancelled?: boolean
+  page?: number
+  size?: number
+}
+
+export const occupancyApi = {
+  create: (data: {
+    equipmentId: number
+    teamId: number
+    trainingDate: string
+    startTime: string
+    endTime: string
+    courseName: string
+    operator: string
+  }) => request.post<TrainingOccupancy>('/occupancy', data),
+  list: (params: OccupancyPageParams) =>
+    request.get<PageResponse<TrainingOccupancy>>('/occupancy', { params }),
+  getByEquipmentDay: (equipmentId: number, trainingDate: string) =>
+    request.get<TrainingOccupancy[]>(`/occupancy/equipment/${equipmentId}`, { params: { trainingDate } }),
+  teamActiveCount: (teamId: number, trainingDate: string) =>
+    request.get<{ teamId: number; trainingDate: string; activeCount: number }>(
+      `/occupancy/team/${teamId}/active-count`,
+      { params: { trainingDate } }
+    ),
+  activeCounts: (trainingDate: string) =>
+    request.get<{ teamId: number; activeCount: number }[]>('/occupancy/active-counts', {
+      params: { trainingDate }
+    })
 }

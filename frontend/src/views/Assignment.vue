@@ -21,9 +21,33 @@ const bindForm = ref({
   remark: ''
 })
 
+// 归属调整
+const assignedData = ref<any[]>([])
+const adjustDialogVisible = ref(false)
+const adjustForm = ref({
+  equipmentId: 0,
+  equipmentCode: '',
+  currentTeamId: 0,
+  newTeamId: 0,
+  operator: '管理员',
+  reason: ''
+})
+
 const fetchData = async () => {
   unassignedEquipments.value = await assignmentApi.getUnassigned() as any
   teams.value = await teamApi.getAll() as any
+}
+
+const fetchAssigned = async () => {
+  // 逐班组汇总当前归属关系
+  const rows: any[] = []
+  for (const team of teams.value) {
+    const eqs = (await assignmentApi.getByTeam(team.id!)) as any as Equipment[]
+    for (const eq of eqs) {
+      rows.push({ ...eq, teamId: team.id, teamName: team.teamName })
+    }
+  }
+  assignedData.value = rows
 }
 
 const fetchHistory = async () => {
@@ -55,6 +79,45 @@ const handleBind = async () => {
   ElMessage.success('绑定成功')
   bindDialogVisible.value = false
   fetchData()
+  fetchAssigned()
+}
+
+const openAdjustDialog = (row: any) => {
+  adjustForm.value = {
+    equipmentId: row.id,
+    equipmentCode: row.equipmentCode,
+    currentTeamId: row.teamId,
+    newTeamId: 0,
+    operator: '管理员',
+    reason: ''
+  }
+  adjustDialogVisible.value = true
+}
+
+const handleAdjust = async () => {
+  if (!adjustForm.value.newTeamId) {
+    ElMessage.warning('请选择新班组')
+    return
+  }
+  if (adjustForm.value.newTeamId === adjustForm.value.currentTeamId) {
+    ElMessage.warning('新班组与原班组相同')
+    return
+  }
+  await assignmentApi.adjust({
+    equipmentId: adjustForm.value.equipmentId,
+    newTeamId: adjustForm.value.newTeamId,
+    operator: adjustForm.value.operator,
+    reason: adjustForm.value.reason
+  })
+  ElMessage.success('归属已调整，该器材未结束的课目占用已当场作废')
+  adjustDialogVisible.value = false
+  fetchData()
+  fetchAssigned()
+}
+
+const handleTabChange = (name: string) => {
+  if (name === 'adjust') fetchAssigned()
+  if (name === 'history') fetchHistory()
 }
 
 onMounted(() => {
@@ -73,7 +136,7 @@ onMounted(() => {
       </el-button>
     </div>
 
-    <el-tabs v-model="activeTab">
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
       <el-tab-pane label="待绑定器材" name="bind">
         <div class="bg-white p-4 rounded-lg shadow">
           <div v-if="unassignedEquipments.length === 0" class="text-center text-gray-400 py-8">
@@ -88,6 +151,32 @@ onMounted(() => {
                 <el-button type="primary" size="small" @click="openBindDialog(row)">
                   <Link2 class="w-4 h-4 mr-1" />
                   绑定班组
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane label="归属调整" name="adjust">
+        <div class="bg-white p-4 rounded-lg shadow">
+          <el-alert
+            type="warning"
+            :closable="false"
+            show-icon
+            title="调整归属不会被拦截；该器材尚未结束的课目占用会当场作废，并留下谁在何时因改班作废的痕迹。"
+            class="mb-3"
+          />
+          <el-table :data="assignedData">
+            <el-table-column prop="equipmentCode" label="器材编号" width="140" />
+            <el-table-column prop="trainingPurpose" label="训练用途" width="180" />
+            <el-table-column prop="sizeSpec" label="尺寸规格" width="150" />
+            <el-table-column prop="teamName" label="当前班组" width="140" />
+            <el-table-column label="操作" width="140">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="openAdjustDialog(row)">
+                  <RefreshCw class="w-4 h-4 mr-1" />
+                  调整归属
                 </el-button>
               </template>
             </el-table-column>
@@ -140,6 +229,47 @@ onMounted(() => {
       <template #footer>
         <el-button @click="bindDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleBind">绑定</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog title="调整器材归属" v-model="adjustDialogVisible" width="420px">
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        title="确认后该器材今天及以后、尚未结束的课目占用将被当场作废。"
+        class="mb-3"
+      />
+      <el-form :model="adjustForm" label-width="90px">
+        <el-form-item label="器材编号">
+          <el-input :value="adjustForm.equipmentCode" disabled />
+        </el-form-item>
+        <el-form-item label="当前班组">
+          <el-input
+            :value="teams.find(t => t.id === adjustForm.currentTeamId)?.teamName"
+            disabled
+          />
+        </el-form-item>
+        <el-form-item label="新班组" required>
+          <el-select v-model="adjustForm.newTeamId" placeholder="请选择新班组">
+            <el-option
+              v-for="team in teams.filter(t => t.id !== adjustForm.currentTeamId)"
+              :key="team.id"
+              :label="team.teamName"
+              :value="team.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="调整原因">
+          <el-input v-model="adjustForm.reason" type="textarea" :rows="2" placeholder="请输入调整原因" />
+        </el-form-item>
+        <el-form-item label="操作人">
+          <el-input v-model="adjustForm.operator" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAdjust">确认调整</el-button>
       </template>
     </el-dialog>
   </div>
