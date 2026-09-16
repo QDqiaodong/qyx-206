@@ -32,7 +32,10 @@ public class Assignment {
 
     @PrePersist
     protected void onCreate() {
-        bindTime = LocalDateTime.now();
+        // 老流水迁移核对起点时允许显式指定，只在未指定时补当前时刻
+        if (bindTime == null) {
+            bindTime = LocalDateTime.now();
+        }
     }
 
     public Long getId() {

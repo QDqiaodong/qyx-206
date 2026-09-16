@@ -78,8 +78,11 @@ flowchart TB
 |------|------|------|
 | POST | /api/assignment/bind | 绑定器材到班组 |
 | PUT | /api/assignment/adjust | 调整器材归属 |
-| GET | /api/assignment/history | 查询变更记录 |
+| GET | /api/assignment/history | 查询变更记录（含每段区间起止） |
 | GET | /api/assignment/team/{teamId} | 查询班组器材 |
+| GET | /api/assignment/equipment/{equipmentId}/intervals | 查询一件器材的归属区间时间线 |
+| GET | /api/assignment/ownership-mismatches | 对账：当前归属与流水末段对不上的器材清单（只列账不改账） |
+| POST | /api/assignment/history/migrate-intervals | 老流水一次性推区间，推不动的逐件列明原因 |
 
 ### 4.4 统计 API
 | 方法 | 路径 | 描述 |
@@ -140,6 +143,8 @@ erDiagram
         bigint old_team_id "原班组ID"
         bigint new_team_id "新班组ID"
         datetime change_time "变更时间"
+        datetime valid_from "本段归属开始时刻（含）"
+        datetime valid_to "本段归属结束时刻；在用段为空"
         varchar operator "操作人"
         varchar reason "变更原因"
     }
@@ -187,11 +192,13 @@ CREATE TABLE assignment_history (
     old_team_id BIGINT COMMENT '原班组ID',
     new_team_id BIGINT NOT NULL COMMENT '新班组ID',
     change_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '变更时间',
+    valid_from DATETIME COMMENT '本段归属开始时刻（含）；与上一段 valid_to 严格相接',
+    valid_to DATETIME COMMENT '本段归属结束时刻；在用段为 NULL',
     operator VARCHAR(50) COMMENT '操作人',
     reason VARCHAR(200) COMMENT '变更原因',
     INDEX idx_equipment_id (equipment_id),
     INDEX idx_change_time (change_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='归属变更记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='归属变更记录表（区间链：同一件器材相邻段首尾相接，仅末段开口）';
 ```
 
 ### 6.3 Redis缓存设计

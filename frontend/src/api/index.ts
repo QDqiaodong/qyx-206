@@ -51,8 +51,47 @@ export interface AssignmentHistory {
   newTeamId: number
   newTeamName?: string
   changeTime?: string
+  /** 这一段归属从什么时候开始 */
+  validFrom?: string
+  /** 这一段归属到什么时候结束；空 = 至今仍在用 */
+  validTo?: string
   operator: string
   reason: string
+}
+
+export interface AssignmentInterval {
+  historyId: number
+  equipmentId: number
+  equipmentCode: string
+  teamId: number
+  teamName: string
+  validFrom: string
+  validTo?: string
+  /** 是否当前仍在用的最后一段 */
+  current: boolean
+  /** 这一段待了多久，如 "3天4小时" */
+  durationText?: string
+  operator?: string
+  reason?: string
+}
+
+export interface OwnershipMismatch {
+  /** TEAM_MISMATCH=归属单与末段班组不一致；NO_INTERVAL=无归属区间；MULTIPLE_OPEN=多段在用区间；ORPHAN_INTERVAL=有区间无归属单 */
+  type: 'TEAM_MISMATCH' | 'NO_INTERVAL' | 'MULTIPLE_OPEN' | 'ORPHAN_INTERVAL'
+  equipmentId: number
+  equipmentCode: string
+  assignmentTeamId?: number
+  assignmentTeamName?: string
+  segmentTeamId?: number
+  segmentTeamName?: string
+  detail: string
+}
+
+export interface IntervalMigrationResult {
+  legacyEquipmentCount: number
+  migratedEquipmentCount: number
+  migratedSegmentCount: number
+  problems: { equipmentId: number; equipmentCode: string; reason: string }[]
 }
 
 export interface TeamStatistics {
@@ -160,7 +199,11 @@ export const assignmentApi = {
   getHistory: (params: { page: number; size: number }) =>
     request.get<PageResponse<AssignmentHistory>>('/assignment/history', { params }),
   getByTeam: (teamId: number) => request.get<Equipment[]>(`/assignment/team/${teamId}`),
-  getUnassigned: () => request.get<Equipment[]>('/assignment/unassigned')
+  getUnassigned: () => request.get<Equipment[]>('/assignment/unassigned'),
+  getIntervals: (equipmentId: number) =>
+    request.get<AssignmentInterval[]>(`/assignment/equipment/${equipmentId}/intervals`),
+  getMismatches: () => request.get<OwnershipMismatch[]>('/assignment/ownership-mismatches'),
+  migrateIntervals: () => request.post<IntervalMigrationResult>('/assignment/history/migrate-intervals')
 }
 
 export const statisticsApi = {

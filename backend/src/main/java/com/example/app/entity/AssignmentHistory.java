@@ -27,6 +27,18 @@ public class AssignmentHistory {
     @Column(name = "change_time", updatable = false)
     private LocalDateTime changeTime;
 
+    /**
+     * 本段归属区间的开始时刻（含）。与同一器材上一段的 valid_to 严格相等，不留空档。
+     */
+    @Column(name = "valid_from")
+    private LocalDateTime validFrom;
+
+    /**
+     * 本段归属区间的结束时刻（含边界交给下一段）。仍在用的最后一段为 NULL。
+     */
+    @Column(name = "valid_to")
+    private LocalDateTime validTo;
+
     @Column(name = "operator", length = 50)
     private String operator;
 
@@ -35,7 +47,10 @@ public class AssignmentHistory {
 
     @PrePersist
     protected void onCreate() {
-        changeTime = LocalDateTime.now();
+        // 老流水迁移会显式指定变更时刻，只在未指定时补当前时刻
+        if (changeTime == null) {
+            changeTime = LocalDateTime.now();
+        }
     }
 
     public Long getId() {
@@ -76,6 +91,22 @@ public class AssignmentHistory {
 
     public void setChangeTime(LocalDateTime changeTime) {
         this.changeTime = changeTime;
+    }
+
+    public LocalDateTime getValidFrom() {
+        return validFrom;
+    }
+
+    public void setValidFrom(LocalDateTime validFrom) {
+        this.validFrom = validFrom;
+    }
+
+    public LocalDateTime getValidTo() {
+        return validTo;
+    }
+
+    public void setValidTo(LocalDateTime validTo) {
+        this.validTo = validTo;
     }
 
     public String getOperator() {
