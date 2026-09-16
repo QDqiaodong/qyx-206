@@ -173,6 +173,30 @@ export interface LoanSummary {
   returnedCount: number
 }
 
+export interface ShuttleRunScore {
+  id?: number
+  teamId: number
+  teamName?: string
+  testDate: string
+  /** 应测人数 */
+  expectedCount?: number
+  /** 合格人数 */
+  passedCount?: number
+  /** 合格率（百分比，保留 1 位）；当天未记成绩时为 null，由后端实时算出 */
+  passRate?: number | null
+  operator?: string
+  /** 乐观锁版本号：编辑提交时原样回传，被别人改过则 409 */
+  version?: number
+}
+
+export interface ShuttleRunSummary {
+  testDate: string
+  totalExpected: number
+  totalPassed: number
+  /** 总合格率（百分比，保留 1 位），与班组卡片同一口径实时算出 */
+  passRate: number | null
+}
+
 export interface PageResponse<T> {
   content: T[]
   totalElements: number
@@ -275,4 +299,23 @@ export const loanApi = {
   list: (params: LoanPageParams) => request.get<PageResponse<EquipmentLoan>>('/loan', { params }),
   summary: () => request.get<LoanSummary>('/loan/summary'),
   sweepOverdue: () => request.post<{ markedOverdue: number }>('/loan/sweep-overdue')
+}
+
+export const shuttleRunApi = {
+  listByTeam: (teamId: number) =>
+    request.get<ShuttleRunScore[]>(`/shuttle-run/team/${teamId}`),
+  getOne: (teamId: number, testDate: string) =>
+    request.get<ShuttleRunScore | null>(
+      `/shuttle-run/team/${teamId}/date/${testDate}`,
+      { validateStatus: (status: number) => status === 200 || status === 204 }
+    ),
+  overview: (testDate: string) =>
+    request.get<ShuttleRunScore[]>('/shuttle-run/overview', { params: { testDate } }),
+  summary: (testDate: string) =>
+    request.get<ShuttleRunSummary>('/shuttle-run/summary', { params: { testDate } }),
+  save: (
+    teamId: number,
+    testDate: string,
+    data: { expectedCount: number; passedCount: number; operator?: string; version?: number }
+  ) => request.put<ShuttleRunScore>(`/shuttle-run/team/${teamId}/date/${testDate}`, data)
 }

@@ -3,8 +3,12 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Edit, Delete, Search } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
-import { teamApi, type Team } from '@/api'
+import { teamApi, shuttleRunApi, type Team, type ShuttleRunScore } from '@/api'
 
+/**
+ * 班组页新增“合格人数”列：按所选测验日，展示每个班组当天折返跑合格人数。
+ * 数字全部实时取后端（与总览同一本账），本页不缓存、不自行推算合格率。
+ */
 const router = useRouter()
 const tableData = ref<Team[]>([])
 const total = ref(0)
@@ -13,6 +17,16 @@ const pageSize = ref(10)
 const keyword = ref('')
 const deleteDialogVisible = ref(false)
 const deleteId = ref<number | null>(null)
+
+const testDate = ref(today())
+const scoreMap = ref<Record<number, ShuttleRunScore>>({})
+
+function today(): string {
+  const d = new Date()
+  const m = `${d.getMonth() + 1}`.padStart(2, '0')
+  const day = `${d.getDate()}`.padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
 
 const fetchData = async () => {
   const params = {
@@ -23,6 +37,19 @@ const fetchData = async () => {
   const result: any = await teamApi.getList(params)
   tableData.value = result.content
   total.value = result.totalElements
+  await fetchScores()
+}
+
+// 按测验日取全部班组的成绩，回填到班组行；当天没记成绩的班组显示“—”
+const fetchScores = async () => {
+  const rows = (await shuttleRunApi.overview(testDate.value)) as any as ShuttleRunScore[]
+  const map: Record<number, ShuttleRunScore> = {}
+  for (const row of rows) {
+    if (row.teamId != null && row.id != null) {
+      map[row.teamId] = row
+    }
+  }
+  scoreMap.value = map
 }
 
 const handleSearch = () => {
@@ -59,7 +86,7 @@ onMounted(() => {
       </el-button>
     </div>
 
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-4 flex-wrap">
       <el-input
         v-model="keyword"
         placeholder="搜索班组名称"
@@ -71,12 +98,31 @@ onMounted(() => {
         </template>
       </el-input>
       <el-button @click="handleSearch">搜索</el-button>
+      <div class="flex items-center gap-2 ml-auto">
+        <span class="text-sm text-gray-500">折返跑测验日</span>
+        <el-date-picker
+          v-model="testDate"
+          type="date"
+          value-format="YYYY-MM-DD"
+          :clearable="false"
+          @change="fetchScores"
+        />
+      </div>
     </div>
 
     <el-table :data="tableData" v-loading>
       <el-table-column prop="teamName" label="班组名称" width="150" />
       <el-table-column prop="memberCount" label="成员数量" width="100" />
-      <el-table-column prop="description" label="描述" min-width="200" />
+      <el-table-column label="合格人数" width="130" align="center">
+        <template #default="{ row }">
+          <span v-if="scoreMap[row.id]">
+            {{ scoreMap[row.id].passedCount }}
+            <span class="text-xs text-gray-400">/ {{ scoreMap[row.id].expectedCount }} 人</span>
+          </span>
+          <span v-else class="text-gray-300">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="description" label="描述" min-width="180" />
       <el-table-column prop="createTime" label="创建时间" width="180" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">

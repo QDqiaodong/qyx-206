@@ -100,6 +100,25 @@ CREATE TABLE IF NOT EXISTS equipment_loan (
     CONSTRAINT fk_loan_team FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='器材外借离场登记表';
 
+-- 折返跑测验成绩：同一班组同一测验日只允许一行（纸上先记一版、当天改人数走同一行更新）
+-- 合格率不入库：班组卡片与训练基地总览都按 合格人数/应测人数 实时重算，两处永远同一本账
+-- 两人同时改同一班组同一日：version 条件更新只放后写者之外的第一版，后写者整单 409，不盖先写者
+CREATE TABLE IF NOT EXISTS shuttle_run_score (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    team_id BIGINT NOT NULL COMMENT '班组ID',
+    test_date DATE NOT NULL COMMENT '测验日期',
+    expected_count INT NOT NULL COMMENT '应测人数',
+    passed_count INT NOT NULL COMMENT '合格人数（不得大于应测人数）',
+    operator VARCHAR(50) COMMENT '登记/修改的教员',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '首次记录时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最近改人数时间',
+    version BIGINT DEFAULT 0 COMMENT '乐观锁版本号：并发改人数时后写者整单被拒',
+    UNIQUE KEY uk_shuttle_team_date (team_id, test_date),
+    INDEX idx_shuttle_date (test_date),
+    CONSTRAINT fk_shuttle_team FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='折返跑测验成绩表（班组+测验日唯一）';
+
+
 INSERT INTO team (team_name, member_count, description) VALUES
 ('灭火一班', 12, '负责灭火训练'),
 ('灭火二班', 10, '负责灭火训练'),

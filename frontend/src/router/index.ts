@@ -51,6 +51,11 @@ const routes: RouteRecordRaw[] = [
     path: '/loan',
     name: 'Loan',
     component: () => import('@/views/Loan.vue')
+  },
+  {
+    path: '/shuttle-run',
+    name: 'ShuttleRun',
+    component: () => import('@/views/ShuttleRun.vue')
   }
 ]
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Home, Wrench, Users, Link2, CalendarClock, LogOut } from 'lucide-vue-next'
+import { Home, Wrench, Users, Link2, CalendarClock, LogOut, ClipboardCheck } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,7 +12,8 @@ const menuItems = [
   { path: '/team', icon: Users, label: '班组管理' },
   { path: '/assignment', icon: Link2, label: '归属绑定' },
   { path: '/occupancy', icon: CalendarClock, label: '课目占用' },
-  { path: '/loan', icon: LogOut, label: '外借离场' }
+  { path: '/loan', icon: LogOut, label: '外借离场' },
+  { path: '/shuttle-run', icon: ClipboardCheck, label: '折返跑成绩' }
 ]
 
 const activeIndex = computed(() => route.path)
