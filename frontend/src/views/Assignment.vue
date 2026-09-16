@@ -63,6 +63,15 @@ const mismatchTypeLabel = (type: OwnershipMismatch['type']) => {
   }
 }
 
+// 班组下拉选项与班组档案同版：名称后跟在编制与职责说明，
+// 派活时照选项上的最新编制走，不再各页各记
+const teamOptionLabel = (t: Team) => {
+  const parts = [`${t.teamName}（编制 ${t.memberCount ?? 0} 人`]
+  if (t.description && t.description.trim()) parts[0] += ` · ${t.description.trim()}`
+  parts[0] += '）'
+  return parts[0]
+}
+
 const fetchData = async () => {
   unassignedEquipments.value = await assignmentApi.getUnassigned() as any
   teams.value = await teamApi.getAll() as any
@@ -425,7 +434,7 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="选择班组" required>
           <el-select v-model="bindForm.teamId" placeholder="请选择班组">
-            <el-option v-for="team in teams" :key="team.id" :label="team.teamName" :value="team.id" />
+            <el-option v-for="team in teams" :key="team.id" :label="teamOptionLabel(team)" :value="team.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="备注">
@@ -461,7 +470,7 @@ onMounted(() => {
             <el-option
               v-for="team in teams.filter(t => t.id !== adjustForm.currentTeamId)"
               :key="team.id"
-              :label="team.teamName"
+              :label="teamOptionLabel(team)"
               :value="team.id"
             />
           </el-select>

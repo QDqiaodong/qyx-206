@@ -96,6 +96,10 @@ public class StatisticsService {
             TeamStatisticsDTO dto = new TeamStatisticsDTO();
             dto.setTeamId(team.getId());
             dto.setTeamName(team.getTeamName());
+            // 总览卡片上的在编制与职责说明直接取班组档案同一次读：
+            // 档案那一版提交后，这里下一次请求就是同一版，不留旧值缓存
+            dto.setMemberCount(team.getMemberCount());
+            dto.setDescription(team.getDescription());
             dto.setEquipmentCount(availableCountMap.getOrDefault(team.getId(), 0L));
             dto.setAssignedCount(assignedCountMap.getOrDefault(team.getId(), 0L));
             statistics.add(dto);

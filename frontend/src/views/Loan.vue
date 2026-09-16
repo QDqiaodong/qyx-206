@@ -44,6 +44,13 @@ const teamEquipments = ref<Equipment[]>([])
 
 const errMsg = (e: any) => e?.response?.data?.message || e?.message || '操作失败'
 
+// 班组下拉选项与班组档案同版：名称后跟在编制与职责说明
+const teamOptionLabel = (t: Team) => {
+  let label = `${t.teamName}（编制 ${t.memberCount ?? 0} 人`
+  if (t.description && t.description.trim()) label += ` · ${t.description.trim()}`
+  return label + '）'
+}
+
 let timer: number | undefined
 
 const fetchList = async () => {
@@ -209,7 +216,7 @@ onBeforeUnmount(() => {
         style="width: 160px"
         @change="() => { page = 1; fetchList() }"
       >
-        <el-option v-for="t in teams" :key="t.id" :label="t.teamName" :value="t.id" />
+        <el-option v-for="t in teams" :key="t.id" :label="teamOptionLabel(t)" :value="t.id" />
       </el-select>
     </div>
 
@@ -299,7 +306,7 @@ onBeforeUnmount(() => {
             style="width: 100%"
             @change="loadTeamEquipments"
           >
-            <el-option v-for="t in teams" :key="t.id" :label="t.teamName" :value="t.id" />
+            <el-option v-for="t in teams" :key="t.id" :label="teamOptionLabel(t)" :value="t.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="离场器材" required>

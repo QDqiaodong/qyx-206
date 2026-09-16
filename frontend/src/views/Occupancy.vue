@@ -44,6 +44,13 @@ const teamEquipments = ref<Equipment[]>([])
 
 const teamName = (id?: number) => teams.value.find(t => t.id === id)?.teamName ?? '-'
 
+// 班组下拉选项与班组档案同版：名称后跟在编制与职责说明
+const teamOptionLabel = (t: Team) => {
+  let label = `${t.teamName}（编制 ${t.memberCount ?? 0} 人`
+  if (t.description && t.description.trim()) label += ` · ${t.description.trim()}`
+  return label + '）'
+}
+
 const countMap = computed(() => {
   const m = new Map<number, number>()
   for (const t of teams.value) m.set(t.id!, 0)
@@ -181,7 +188,7 @@ onMounted(async () => {
         style="width: 160px"
         @change="fetchList"
       >
-        <el-option v-for="t in teams" :key="t.id" :label="t.teamName" :value="t.id" />
+        <el-option v-for="t in teams" :key="t.id" :label="teamOptionLabel(t)" :value="t.id" />
       </el-select>
       <el-switch
         v-model="includeCancelled"
@@ -256,7 +263,7 @@ onMounted(async () => {
             style="width: 100%"
             @change="loadTeamEquipments"
           >
-            <el-option v-for="t in teams" :key="t.id" :label="t.teamName" :value="t.id" />
+            <el-option v-for="t in teams" :key="t.id" :label="teamOptionLabel(t)" :value="t.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="器材" required>

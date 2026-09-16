@@ -27,8 +27,12 @@ export interface Equipment {
 export interface Team {
   id?: number
   teamName: string
+  /** 在册编制 */
   memberCount: number
+  /** 职责说明 */
   description: string
+  /** 乐观锁版本号：编辑提交时原样回传，被别人改过则 409 */
+  version?: number
   createTime?: string
   updateTime?: string
 }
@@ -97,6 +101,10 @@ export interface IntervalMigrationResult {
 export interface TeamStatistics {
   teamId: number
   teamName: string
+  /** 在册编制：与班组档案同版实时读出 */
+  memberCount: number
+  /** 职责说明：与班组档案同版实时读出 */
+  description?: string
   /** 可训器材：名下在库、无未结束占用、无在外未还的件数 */
   equipmentCount: number
   /** 名下归属器材总件数（含被占用/在外件，仅作对照） */

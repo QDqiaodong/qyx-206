@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS team (
     description VARCHAR(200) COMMENT '描述',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    version BIGINT DEFAULT 0 COMMENT '乐观锁版本号：两人同时改同一班时只留一次完整保存',
     INDEX idx_team_name (team_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='训练班组表';
 

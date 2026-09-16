@@ -34,8 +34,18 @@ const handleSubmit = async () => {
       ElMessage.success('创建成功')
     }
     router.push('/team')
-  } catch (error) {
-    ElMessage.error('操作失败')
+  } catch (error: any) {
+    // 409：档案已被别人抢先保存，本次整单未落库。
+    // 提示后拉取最新版回填本页，用户基于最新档案重改，不许拿旧版再覆盖一次。
+    if (error?.response?.status === 409) {
+      ElMessage.error(error.response.data?.message || '班组档案刚被其他人改过，请核对最新内容后重新保存')
+      if (isEdit.value) {
+        const latest = await teamApi.getById(form.value.id!) as any as Team
+        form.value = latest
+      }
+      return
+    }
+    ElMessage.error(error?.response?.data?.message || '操作失败')
   }
 }
 </script>

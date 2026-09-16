@@ -152,16 +152,22 @@ onBeforeUnmount(() => {
         <div
           v-for="stat in teamStats"
           :key="stat.teamId"
-          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+          class="p-3 bg-gray-50 rounded-lg"
         >
-          <div class="flex items-center">
-            <div class="w-3 h-3 bg-fire-red rounded-full mr-3"></div>
-            <span class="font-medium">{{ stat.teamName }}</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-3 h-3 bg-fire-red rounded-full mr-3"></div>
+              <span class="font-medium">{{ stat.teamName }}</span>
+              <el-tag size="small" type="info" class="ml-2">在编制 {{ stat.memberCount ?? 0 }} 人</el-tag>
+            </div>
+            <div class="flex items-center gap-4">
+              <span class="text-xs text-gray-400">名下 {{ stat.assignedCount }} 件</span>
+              <span class="text-gray-500">可训器材</span>
+              <span class="text-xl font-bold text-fire-red">{{ stat.equipmentCount }}</span>
+            </div>
           </div>
-          <div class="flex items-center gap-4">
-            <span class="text-xs text-gray-400">名下 {{ stat.assignedCount }} 件</span>
-            <span class="text-gray-500">可训器材</span>
-            <span class="text-xl font-bold text-fire-red">{{ stat.equipmentCount }}</span>
+          <div v-if="stat.description" class="mt-1 ml-6 text-xs text-gray-500">
+            职责：{{ stat.description }}
           </div>
         </div>
         <div v-if="teamStats.length === 0" class="text-center text-gray-400 py-8">

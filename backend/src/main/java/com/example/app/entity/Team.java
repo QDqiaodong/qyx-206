@@ -29,6 +29,15 @@ public class Team {
     @Column(name = "update_time")
     private LocalDateTime updateTime;
 
+    /**
+     * 乐观锁版本号：两人几乎同时改同一个班时，
+     * 更新语句带 version 条件，先落库者版本号 +1，
+     * 后落库者条件不匹配被整单拒绝（409），不会把两次保存拼成半新半旧。
+     */
+    @Version
+    @Column(name = "version")
+    private Long version = 0L;
+
     @PrePersist
     protected void onCreate() {
         createTime = LocalDateTime.now();
@@ -89,5 +98,13 @@ public class Team {
 
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }
