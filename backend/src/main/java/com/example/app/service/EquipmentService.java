@@ -83,4 +83,8 @@ public class EquipmentService {
     public long count() {
         return equipmentRepository.count();
     }
+
+    public List<Long> findAllIds() {
+        return equipmentRepository.findAllIds();
+    }
 }

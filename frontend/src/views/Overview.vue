@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Package, Users, TrendingUp, BarChart3 } from 'lucide-vue-next'
 import * as echarts from 'echarts'
@@ -26,7 +26,7 @@ const initChart = () => {
   chartInstance = echarts.init(chartRef.value)
   const option: echarts.EChartsOption = {
     title: {
-      text: '各班组器材数量统计',
+      text: '各班组可训器材统计',
       left: 'center',
       textStyle: { color: '#333' }
     },
@@ -47,11 +47,11 @@ const initChart = () => {
     },
     yAxis: {
       type: 'value',
-      name: '器材数量'
+      name: '可训器材'
     },
     series: [
       {
-        name: '器材数量',
+        name: '可训器材',
         type: 'bar',
         data: teamStats.value.map(s => s.equipmentCount),
         itemStyle: {
@@ -64,8 +64,17 @@ const initChart = () => {
   chartInstance.setOption(option)
 }
 
+// 首页挂着的期间定时重取：占用刚挂上 / 外借刚出门提交后，
+// 开着的首页自己就会掉数，不用等手动刷新（后端每次实时算，不落缓存）
+let timer: number | undefined
+
 onMounted(() => {
   fetchData()
+  timer = window.setInterval(fetchData, 15_000)
+})
+
+onBeforeUnmount(() => {
+  if (timer) window.clearInterval(timer)
 })
 </script>
 
@@ -92,11 +101,15 @@ onMounted(() => {
     <el-row :gutter="20">
       <el-col :span="6">
         <el-card class="shadow-lg">
-          <el-statistic title="总器材数" :value="overview?.totalEquipment || 0">
+          <el-statistic title="在库可训器材" :value="overview?.totalEquipment || 0">
             <template #prefix>
               <Package class="w-6 h-6 text-fire-red" />
             </template>
           </el-statistic>
+          <div class="mt-2 text-xs text-gray-400">
+            登记 {{ overview?.registeredEquipment || 0 }} 件 ·
+            {{ overview?.unavailableEquipment || 0 }} 件占用/在外不计入
+          </div>
         </el-card>
       </el-col>
       <el-col :span="6">
@@ -110,11 +123,12 @@ onMounted(() => {
       </el-col>
       <el-col :span="6">
         <el-card class="shadow-lg">
-          <el-statistic title="平均器材数" :value="overview?.averageEquipmentPerTeam || 0" :precision="1">
+          <el-statistic title="班均可训器材" :value="overview?.averageEquipmentPerTeam || 0" :precision="1">
             <template #prefix>
               <TrendingUp class="w-6 h-6 text-green-600" />
             </template>
           </el-statistic>
+          <div class="mt-2 text-xs text-gray-400">在库可训器材 ÷ 班组数</div>
         </el-card>
       </el-col>
       <el-col :span="6">
@@ -133,7 +147,7 @@ onMounted(() => {
     </el-card>
 
     <el-card class="shadow-lg">
-      <h3 class="text-lg font-bold mb-4">班组统计详情</h3>
+      <h3 class="text-lg font-bold mb-4">班组可训器材详情</h3>
       <div class="space-y-3">
         <div
           v-for="stat in teamStats"
@@ -145,7 +159,8 @@ onMounted(() => {
             <span class="font-medium">{{ stat.teamName }}</span>
           </div>
           <div class="flex items-center gap-4">
-            <span class="text-gray-500">器材数量</span>
+            <span class="text-xs text-gray-400">名下 {{ stat.assignedCount }} 件</span>
+            <span class="text-gray-500">可训器材</span>
             <span class="text-xl font-bold text-fire-red">{{ stat.equipmentCount }}</span>
           </div>
         </div>

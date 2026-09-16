@@ -34,4 +34,10 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     List<Equipment> findByTeamId(@Param("teamId") Long teamId);
 
     boolean existsByEquipmentCode(String equipmentCode);
+
+    /**
+     * 全部登记器材的主键：首页统计逐件对照在库可训口径用。
+     */
+    @Query("SELECT e.id FROM Equipment e")
+    List<Long> findAllIds();
 }

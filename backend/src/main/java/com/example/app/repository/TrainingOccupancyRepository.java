@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +39,16 @@ public interface TrainingOccupancyRepository extends JpaRepository<TrainingOccup
                                                       @Param("fromDate") LocalDate fromDate);
 
     long countByTeamIdAndTrainingDateAndStatus(Long teamId, LocalDate trainingDate, String status);
+
+    /**
+     * 首页统计口径：被“尚未结束”的有效课目占用占住的器材。
+     * “尚未结束”与改班作废、外借拦截同一条线：训练日在今天之后，
+     * 或今天但结束时刻晚于当前时刻。已作废记录不占数。
+     */
+    @Query("SELECT DISTINCT o.equipmentId FROM TrainingOccupancy o WHERE o.status = 'ACTIVE' " +
+            "AND (o.trainingDate > :today OR (o.trainingDate = :today AND o.endTime > :nowTime))")
+    List<Long> findEquipmentIdsWithNotEndedOccupancy(@Param("today") LocalDate today,
+                                                     @Param("nowTime") LocalTime nowTime);
 
     @Query("SELECT o.teamId, COUNT(o) FROM TrainingOccupancy o " +
             "WHERE o.trainingDate = :trainingDate AND o.status = 'ACTIVE' GROUP BY o.teamId")

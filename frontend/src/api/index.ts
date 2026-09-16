@@ -58,7 +58,10 @@ export interface AssignmentHistory {
 export interface TeamStatistics {
   teamId: number
   teamName: string
+  /** 可训器材：名下在库、无未结束占用、无在外未还的件数 */
   equipmentCount: number
+  /** 名下归属器材总件数（含被占用/在外件，仅作对照） */
+  assignedCount: number
 }
 
 export interface TrainingOccupancy {
@@ -82,8 +85,14 @@ export interface TrainingOccupancy {
 }
 
 export interface OverviewStatistics {
+  /** 在库可训器材数：没有未结束占用、也没有在外未还 */
   totalEquipment: number
+  /** 库里登记总件数（对照用，不参与均数） */
+  registeredEquipment: number
+  /** 被未结束占用/在外未还占住、暂不可训的件数 */
+  unavailableEquipment: number
   totalTeam: number
+  /** 班均可训器材 = 在库可训器材 / 班组数 */
   averageEquipmentPerTeam: number
 }
 
@@ -155,7 +164,7 @@ export const assignmentApi = {
 }
 
 export const statisticsApi = {
-  getOverview: () => request.get<{ totalEquipment: number; totalTeam: number; averageEquipmentPerTeam: number }>('/statistics/overview'),
+  getOverview: () => request.get<OverviewStatistics>('/statistics/overview'),
   getTeamStatistics: () => request.get<TeamStatistics[]>('/statistics/team')
 }
 

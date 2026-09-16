@@ -150,6 +150,13 @@ public class AssignmentService {
         return equipmentService.findByTeamId(teamId);
     }
 
+    /**
+     * 全部归属单：首页统计逐单核对“名下器材是否真在库可训”用。
+     */
+    public List<Assignment> findAllAssignments() {
+        return assignmentRepository.findAll();
+    }
+
     public long countByTeamId(Long teamId) {
         return assignmentRepository.countByTeamId(teamId);
     }

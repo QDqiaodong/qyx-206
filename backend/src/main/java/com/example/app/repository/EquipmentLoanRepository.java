@@ -31,6 +31,13 @@ public interface EquipmentLoanRepository extends JpaRepository<EquipmentLoan, Lo
             Long equipmentId, List<String> statuses);
 
     /**
+     * 首页统计口径：在外未还（OUT / OVERDUE）的离场单占住的器材。
+     * 与出门拦截同一本账：已归还闭环的不再占数。
+     */
+    @Query("SELECT DISTINCT l.equipmentId FROM EquipmentLoan l WHERE l.status IN ('OUT', 'OVERDUE')")
+    List<Long> findEquipmentIdsWithOpenLoan();
+
+    /**
      * 定时扫描：所有已到预计归还时刻仍 OUT 的在途单。
      */
     @Query("SELECT l FROM EquipmentLoan l WHERE l.status = 'OUT' " +
